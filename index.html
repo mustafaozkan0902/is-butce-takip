@@ -802,6 +802,30 @@
     }
 
     function App() {
+      // Current Logged-in User: { name: '...', role: 'admin' | 'user' }
+      const [currentUser, setCurrentUser] = useState(() => {
+        try {
+          const saved = localStorage.getItem('is_butce_user');
+          return saved ? JSON.parse(saved) : null;
+        } catch (e) {
+          return null;
+        }
+      });
+
+      // PIN Passwords (synced with Firebase metadata)
+      const [pins, setPins] = useState(() => {
+        try {
+          const saved = localStorage.getItem('is_butce_pins');
+          return saved ? JSON.parse(saved) : { adminPin: '1234', userPin: '0000' };
+        } catch (e) {
+          return { adminPin: '1234', userPin: '0000' };
+        }
+      });
+
+      // Login Form Temporary States
+      const [loginName, setLoginName] = useState('');
+      const [loginPin, setLoginPin] = useState('');
+
       // Dynamic Projects List (defaults to ['Proje 1'])
       const [projects, setProjects] = useState(() => {
         const saved = localStorage.getItem('is_butce_projects');
@@ -873,6 +897,19 @@
         localStorage.setItem('is_butce_projects', JSON.stringify(projects));
       }, [projects]);
 
+      // Save user & pins to localstorage
+      useEffect(() => {
+        if (currentUser) {
+          localStorage.setItem('is_butce_user', JSON.stringify(currentUser));
+        } else {
+          localStorage.removeItem('is_butce_user');
+        }
+      }, [currentUser]);
+
+      useEffect(() => {
+        localStorage.setItem('is_butce_pins', JSON.stringify(pins));
+      }, [pins]);
+
       // Save activeProject to localstorage
       useEffect(() => {
         localStorage.setItem('is_butce_active_project', activeProject);
@@ -938,11 +975,13 @@
               setIsOnline(false);
             });
 
-          // Listen to dynamic projects list metadata from Firebase
+          // Listen to dynamic projects list and PINs metadata from Firebase
           const metaRef = firestoreDb.collection('families').doc(roomCode);
           const unsubscribeMeta = metaRef.onSnapshot((docSnap) => {
-            if (docSnap.exists && docSnap.data().projects) {
-              setProjects(docSnap.data().projects);
+            if (docSnap.exists) {
+              const data = docSnap.data();
+              if (data.projects) setProjects(data.projects);
+              if (data.pins) setPins(data.pins);
             }
           }, (err) => {
             console.error("Firestore metadata projects sync error:", err);
@@ -957,6 +996,35 @@
           setIsOnline(false);
         }
       }, [roomCode, firebaseConfig]);
+
+      // Login & PIN Handlers
+      const handleLogin = (e) => {
+        e.preventDefault();
+        const nameClean = loginName.trim();
+        const pinClean = loginPin.trim();
+        if (!nameClean || !pinClean) return;
+
+        if (pinClean === pins.adminPin) {
+          setCurrentUser({ name: nameClean, role: 'admin' });
+          setLoginPin('');
+        } else if (pinClean === pins.userPin) {
+          setCurrentUser({ name: nameClean, role: 'user' });
+          setLoginPin('');
+        } else {
+          alert("Hatalı Giriş Şifresi (PIN)! Lütfen tekrar deneyin.");
+        }
+      };
+
+      const handleUpdatePins = async (newPins) => {
+        setPins(newPins);
+        if (db && isOnline) {
+          try {
+            await db.collection('families').doc(roomCode).set({ pins: newPins }, { merge: true });
+          } catch (err) {
+            console.error("Error saving PINs to cloud:", err);
+          }
+        }
+      };
 
       // Handle Adding Projects
       const handleAddProject = async (e) => {
@@ -1032,6 +1100,7 @@
           project: targetProj,
           paymentMethod: paymentMethod,
           isIncome: formMode === 'GELIR', // true if Income, false if Gider
+          addedBy: currentUser ? currentUser.name : 'Bilinmiyor',
           date: new Date().toISOString()
         };
 
@@ -1293,6 +1362,59 @@
       const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
       const activeMonthName = monthNames[currentMonth];
 
+      const isAdmin = currentUser && currentUser.role === 'admin';
+
+      // LOGIN SCREEN IF NOT LOGGED IN
+      if (!currentUser) {
+        return (
+          <div className="app-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '85vh' }}>
+            <div className="card" style={{ width: '100%', maxWidth: '380px', padding: '24px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '6px' }}>🏗️</div>
+                <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                  İş Bütçe Takip
+                </h2>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  Devam etmek için adınızı ve giriş şifrenizi girin
+                </p>
+              </div>
+
+              <form onSubmit={handleLogin}>
+                <div className="form-group">
+                  <label className="form-label">Adınız</label>
+                  <input
+                    type="text"
+                    placeholder="Örn: Mustafa"
+                    value={loginName}
+                    onChange={e => setLoginName(e.target.value)}
+                    className="input-field"
+                    required
+                    autoFocus
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginTop: '12px' }}>
+                  <label className="form-label">Giriş Şifresi (PIN)</label>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    placeholder="••••"
+                    value={loginPin}
+                    onChange={e => setLoginPin(e.target.value)}
+                    className="input-field"
+                    required
+                  />
+                </div>
+
+                <button type="submit" className="submit-btn" style={{ marginTop: '16px' }}>
+                  🔐 Giriş Yap
+                </button>
+              </form>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="app-container">
           
@@ -1302,13 +1424,29 @@
               <div className="brand-title">
                 🏗️ İş Bütçe Takip
               </div>
-              <span 
-                onClick={() => setIsSettingsOpen(true)}
-                className={`sync-badge ${isOnline ? 'online' : 'offline'}`}
-                title="Eşleştirme Ayarlarını Aç"
-              >
-                {isOnline ? `⚡ Canlı: ${roomCode}` : '⚠️ Çevrimdışı'}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span 
+                  onClick={() => isAdmin && setIsSettingsOpen(true)}
+                  className={`sync-badge ${isOnline ? 'online' : 'offline'}`}
+                  style={{ cursor: isAdmin ? 'pointer' : 'default' }}
+                  title={isAdmin ? "Ayarları Aç" : "Canlı Bağlantı Durumu"}
+                >
+                  {isOnline ? `⚡ Canlı` : '⚠️ Çevrimdışı'}
+                </span>
+                <span 
+                  className="badge" 
+                  style={{ background: isAdmin ? '#dbeafe' : '#f1f5f9', color: isAdmin ? '#1e40af' : '#475569', padding: '5px 8px', fontSize: '0.7rem' }}
+                >
+                  👤 {currentUser.name} {isAdmin ? '(Yönetici)' : ''}
+                </span>
+                <button
+                  onClick={() => setCurrentUser(null)}
+                  style={{ background: '#fee2e2', color: '#991b1b', border: 'none', borderRadius: '6px', padding: '5px 8px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}
+                  title="Çıkış Yap / Kullanıcı Değiştir"
+                >
+                  Çıkış
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1328,12 +1466,14 @@
                 🏗️ {p}
               </button>
             ))}
-            <button
-              onClick={() => setIsAddProjOpen(true)}
-              className="proj-tab-btn add-btn"
-            >
-              ➕ Yeni Proje
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => setIsAddProjOpen(true)}
+                className="proj-tab-btn add-btn"
+              >
+                ➕ Yeni Proje
+              </button>
+            )}
           </div>
 
           {/* Clean 3-Box Financial Summary & Distribution Bar */}
@@ -1636,28 +1776,37 @@
                               <span className={`badge ${e.paymentMethod || 'havale'}`}>
                                 {payName}
                               </span>
+                              {e.addedBy && (
+                                <span className="badge" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569' }}>
+                                  👤 {e.addedBy}
+                                </span>
+                              )}
                             </div>
                           </td>
                           <td className={`amount-cell ${e.isIncome ? 'plus' : 'minus'}`}>
                             {e.isIncome ? '+' : '-'}{formatTL(e.amount)}
                           </td>
                           <td style={{ textAlign: 'center' }}>
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '4px' }}>
-                              <button 
-                                onClick={() => setEditingExpense(e)} 
-                                className="action-btn" 
-                                title="Düzenle"
-                              >
-                                ✏️
-                              </button>
-                              <button 
-                                onClick={() => handleDeleteExpense(e.id)} 
-                                className="action-btn del" 
-                                title="Sil"
-                              >
-                                🗑️
-                              </button>
-                            </div>
+                            {isAdmin ? (
+                              <div style={{ display: 'flex', justifyContent: 'center', gap: '4px' }}>
+                                <button 
+                                  onClick={() => setEditingExpense(e)} 
+                                  className="action-btn" 
+                                  title="Düzenle"
+                                >
+                                  ✏️
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteExpense(e.id)} 
+                                  className="action-btn del" 
+                                  title="Sil"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }} title="Sadece Yönetici düzenleyebilir">🔒</span>
+                            )}
                           </td>
                         </tr>
                       );
@@ -1689,13 +1838,15 @@
               <span className="icon">📊</span>
               <span>Özet & Analiz</span>
             </button>
-            <button 
-              onClick={() => setIsSettingsOpen(true)} 
-              className="nav-item"
-            >
-              <span className="icon">⚙️</span>
-              <span>Ayarlar</span>
-            </button>
+            {isAdmin && (
+              <button 
+                onClick={() => setIsSettingsOpen(true)} 
+                className="nav-item"
+              >
+                <span className="icon">⚙️</span>
+                <span>Ayarlar</span>
+              </button>
+            )}
           </div>
 
           {/* ADD PROJECT MODAL */}
@@ -1863,7 +2014,35 @@
                 </div>
 
                 <div className="edit-grid" style={{ marginTop: '4px' }}>
-                  <div className="form-group">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div className="form-group">
+                      <label className="form-label">Yönetici Şifresi (PIN)</label>
+                      <input 
+                        type="text" 
+                        value={pins.adminPin}
+                        onChange={e => handleUpdatePins({ ...pins, adminPin: e.target.value.trim() })}
+                        className="input-field text-mono"
+                        placeholder="1234"
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Kullanıcı Şifresi (PIN)</label>
+                      <input 
+                        type="text" 
+                        value={pins.userPin}
+                        onChange={e => handleUpdatePins({ ...pins, userPin: e.target.value.trim() })}
+                        className="input-field text-mono"
+                        placeholder="0000"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '-6px' }}>
+                    * Yönetici her şeyi düzenleyip silebilir. Kullanıcı sadece kayıt ekleyebilir ve görebilir.
+                  </span>
+
+                  <div className="form-group" style={{ marginTop: '6px' }}>
                     <label className="form-label">Ortak Oda Kodu (Cihaz Eşleştirme)</label>
                     <input 
                       type="text" 
