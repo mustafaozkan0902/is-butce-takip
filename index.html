@@ -1,0 +1,2222 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#090d16" />
+  <title>İş Bütçe Takip | Şantiye Giderleri</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- React & Babel via CDN with local offline fallbacks -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script>window.React || document.write('<script src="libs/react.production.min.js"><\/script>')</script>
+
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script>window.ReactDOM || document.write('<script src="libs/react-dom.production.min.js"><\/script>')</script>
+
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script>window.Babel || document.write('<script src="libs/babel.min.js"><\/script>')</script>
+
+  <!-- Firebase Web SDK (Compat version for single page double-click ease) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script>window.firebase || document.write('<script src="libs/firebase-app-compat.js"><\/script>')</script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script>window.firebase && window.firebase.firestore || document.write('<script src="libs/firebase-firestore-compat.js"><\/script>')</script>
+
+  <style>
+    :root {
+      --bg-primary: #090d16;
+      --bg-card: rgba(22, 30, 46, 0.8);
+      --bg-input: #131b2e;
+      --bg-table-row-even: rgba(22, 30, 46, 0.4);
+      --bg-table-row-odd: rgba(30, 41, 59, 0.4);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(99, 102, 241, 0.5);
+      
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      
+      /* Main Tabs Colors */
+      --color-iscilik: #10b981; /* Emerald */
+      --color-iscilik-light: rgba(16, 185, 129, 0.15);
+      
+      --color-malzeme: #3b82f6; /* Blue */
+      --color-malzeme-light: rgba(59, 130, 246, 0.15);
+      
+      --color-sahsi: #a855f7; /* Purple */
+      --color-sahsi-light: rgba(168, 85, 247, 0.15);
+      
+      --color-accent: #6366f1;
+      --color-success: #10b981;
+      --color-danger: #ef4444;
+      --color-warning: #f59e0b;
+
+      --font-heading: 'Outfit', sans-serif;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+      -webkit-tap-highlight-color: transparent; 
+    }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding-bottom: 50px;
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(59, 130, 246, 0.06) 0%, transparent 45%),
+        radial-gradient(circle at 90% 90%, rgba(168, 85, 247, 0.06) 0%, transparent 45%);
+      background-attachment: fixed;
+    }
+
+    .app-container {
+      max-width: 540px;
+      margin: 0 auto;
+      padding: 14px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Main Projects Selector at the top (dynamic tabs with scrolling if many) */
+    .project-tabs-container {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 14px;
+      overflow-x: auto;
+      padding: 4px;
+      background: #0d1527;
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+      scrollbar-width: none;
+    }
+    .project-tabs-container::-webkit-scrollbar { display: none; }
+
+    .proj-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 8px 14px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      border-radius: 10px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .proj-tab-btn.active {
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+    }
+    
+    .proj-tab-btn.add-btn {
+      background: rgba(255, 255, 255, 0.05);
+      color: #818cf8;
+      border: 1px dashed rgba(129, 140, 248, 0.3);
+    }
+    .proj-tab-btn.add-btn:hover {
+      background: rgba(129, 140, 248, 0.1);
+      color: #fff;
+    }
+
+    /* Header Bar */
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .brand-title {
+      font-family: var(--font-heading);
+      font-size: 1.3rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sync-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+    }
+    .sync-badge.online { 
+      background: rgba(16, 185, 129, 0.12); 
+      color: #34d399; 
+      border-color: rgba(16, 185, 129, 0.3); 
+    }
+    .sync-badge.offline { 
+      background: rgba(245, 158, 11, 0.12); 
+      color: #fbbf24; 
+      border-color: rgba(245, 158, 11, 0.3); 
+    }
+
+    /* Income vs Expense Toggle Form Switcher */
+    .tx-type-switcher {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 14px;
+      background: #0d1527;
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+    }
+    .tx-type-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .tx-type-btn.active.gider {
+      background: var(--color-danger);
+      color: white;
+      box-shadow: 0 3px 10px rgba(239, 68, 68, 0.2);
+    }
+    .tx-type-btn.active.gelir {
+      background: var(--color-success);
+      color: white;
+      box-shadow: 0 3px 10px rgba(16, 185, 129, 0.2);
+    }
+
+    /* Summary Indicators */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .summary-grid.bottom {
+      grid-template-columns: 1fr;
+    }
+
+    .summary-cell {
+      padding: 14px;
+      border-right: 1px solid var(--border-color);
+      text-align: center;
+    }
+    .summary-cell:last-child {
+      border-right: none;
+    }
+    .summary-cell.full-width {
+      border-right: none;
+      background: rgba(99, 102, 241, 0.04);
+    }
+
+    .summary-cell .label {
+      color: var(--text-secondary);
+      font-size: 0.68rem;
+      font-weight: 700;
+      display: block;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .summary-cell .val {
+      font-family: var(--font-heading);
+      font-size: 1.25rem;
+      font-weight: 800;
+    }
+    .summary-cell .val.gelir { color: #10b981; }
+    .summary-cell .val.gider { color: #f87171; }
+    .summary-cell .val.bakiye { color: #818cf8; }
+    .summary-cell .val.bakiye.pozitif { color: #34d399; }
+    .summary-cell .val.bakiye.negatif { color: #ef4444; }
+
+    /* 3-Way Budget Distribution Progress Bar */
+    .couple-bar-container {
+      background: #0d1527;
+      padding: 12px 14px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .couple-bar-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .couple-progress-track {
+      height: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 9999px;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .progress-segment {
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+    .progress-segment.iscilik { background: var(--color-iscilik); }
+    .progress-segment.malzeme { background: var(--color-malzeme); }
+    .progress-segment.sahsi { background: var(--color-sahsi); }
+
+    /* Day Counter Style */
+    .day-counter-row {
+      background: #070b13;
+      padding: 6px 12px;
+      text-align: center;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #818cf8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      border-radius: 0 0 18px 18px;
+    }
+
+    /* Form Layout */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 12px;
+    }
+
+    .form-group.full { grid-column: span 2; }
+    
+    .form-label { 
+      font-size: 0.75rem; 
+      color: var(--text-secondary); 
+      font-weight: 700; 
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-field:focus { 
+      border-color: var(--color-accent); 
+    }
+
+    .amount-input-box {
+      position: relative; 
+      display: flex; 
+      align-items: center;
+    }
+
+    .amount-symbol {
+      position: absolute; 
+      left: 12px; 
+      font-weight: 800; 
+      color: #818cf8; 
+      font-size: 1.1rem;
+    }
+
+    .amount-input-box .input-field {
+      padding-left: 28px; 
+      font-family: var(--font-heading); 
+      font-weight: 800; 
+      font-size: 1.15rem;
+    }
+
+    /* Toggle Buttons Group inside Form */
+    .toggle-group {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .toggle-btn {
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 8px 4px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn.active.iscilik { border-color: var(--color-iscilik); background: var(--color-iscilik-light); color: #fff; }
+    .toggle-btn.active.malzeme { border-color: var(--color-malzeme); background: var(--color-malzeme-light); color: #fff; }
+    .toggle-btn.active.sahsi { border-color: var(--color-sahsi); background: var(--color-sahsi-light); color: #fff; }
+    
+    .toggle-btn.active.payment { border-color: var(--color-accent); background: rgba(99, 102, 241, 0.15); color: #fff; }
+
+    /* Category selection grid in Form */
+    .cat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+    }
+
+    .cat-btn {
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 8px 2px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 700;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    .cat-btn.active {
+      border-color: #818cf8;
+      background: rgba(129, 140, 248, 0.12);
+      color: #ffffff;
+      transform: scale(1.02);
+    }
+    .cat-btn span.emoji {
+      font-size: 1.2rem;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+      transition: all 0.2s;
+    }
+    .submit-btn:active {
+      transform: scale(0.98);
+    }
+
+    /* Filter Row */
+    .filter-section {
+      margin-bottom: 12px;
+    }
+
+    .filter-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .filter-scroll {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      scrollbar-width: none;
+    }
+    .filter-scroll::-webkit-scrollbar { display: none; }
+
+    .filter-pill {
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 700;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .filter-pill.active {
+      background: #818cf8;
+      border-color: #818cf8;
+      color: #ffffff;
+    }
+
+    /* Data Table Layout */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    .data-table th {
+      background: #0d1527;
+      color: var(--text-secondary);
+      font-weight: 700;
+      text-align: left;
+      padding: 10px;
+      border-bottom: 2px solid var(--border-color);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .data-table td {
+      padding: 10px;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: middle;
+    }
+
+    .data-table tr:nth-child(even) { background: var(--bg-table-row-even); }
+    .data-table tr:nth-child(odd) { background: var(--bg-table-row-odd); }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 5px;
+      font-weight: 800;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+    }
+    
+    /* Type Badges */
+    .badge.iscilik { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+    .badge.malzeme { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+    .badge.sahsi { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+    .badge.gelir-badge { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+
+    /* Payment Badges */
+    .badge.havale { background: rgba(245, 158, 11, 0.12); color: #fbbf24; }
+    .badge.kk { background: rgba(239, 68, 68, 0.12); color: #f87171; }
+    .badge.nakit { background: rgba(16, 185, 129, 0.12); color: #34d399; }
+
+    .badge.project-badge { background: rgba(99, 102, 241, 0.15); color: #a5b4fc; max-width: 90px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+
+    .amount-cell {
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 0.95rem;
+      text-align: right;
+    }
+    .amount-cell.plus { color: #34d399; }
+    .amount-cell.minus { color: #f87171; }
+
+    .action-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      font-size: 0.85rem;
+      transition: color 0.15s;
+    }
+    .action-btn:hover { color: #ffffff; }
+    .action-btn.del:hover { color: var(--color-danger); }
+
+    .table-footer-summary {
+      background: #0d1527;
+      padding: 12px;
+      border-top: 2px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 800;
+      font-size: 0.85rem;
+      border-radius: 0 0 12px 12px;
+    }
+
+    .table-footer-summary span.amount {
+      color: #38bdf8;
+      font-family: var(--font-heading);
+      font-size: 1.15rem;
+      font-weight: 800;
+    }
+
+    /* Modal Overlay */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-card {
+      background: #111827;
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 440px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+
+    .modal-title {
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 1.15rem;
+      color: #ffffff;
+    }
+
+    .close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.3rem;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .close-btn:hover { color: #fff; }
+
+    /* Floating Bottom Nav */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(11, 17, 32, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 10px;
+      z-index: 90;
+    }
+
+    .nav-item {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 0.65rem;
+      font-weight: 700;
+      cursor: pointer;
+      gap: 4px;
+      width: 80px;
+      transition: color 0.2s;
+    }
+    .nav-item:hover { color: #ffffff; }
+    .nav-item.active { color: #818cf8; }
+    .nav-item span.icon { font-size: 1.25rem; }
+
+    /* Analysis Styles */
+    .stats-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 380px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .stats-container::-webkit-scrollbar { width: 4px; }
+    .stats-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+    .stat-row {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+
+    .stat-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .stat-bar {
+      height: 6px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .stat-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.3s;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 30px 10px;
+      color: var(--text-muted);
+    }
+    .empty-state .icon { font-size: 2.2rem; margin-bottom: 8px; display: block; }
+    .empty-state p { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); }
+    .empty-state span { font-size: 0.72rem; }
+
+    /* Edit Form Styles */
+    .edit-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    /* Project management list in settings */
+    .project-mgmt-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 120px;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      padding: 8px;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.2);
+    }
+
+    .project-mgmt-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-input);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .project-mgmt-item button {
+      background: transparent;
+      border: none;
+      color: var(--color-danger);
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    /* Utility */
+    .text-mono { font-family: monospace; }
+    .mt-2 { margin-top: 8px; }
+    .mt-4 { margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <!-- Error Console for Developer Debugging -->
+  <div id="error-console" style="display:none; background:#ef4444; color:#fff; padding:15px; margin:15px; border-radius:10px; font-family:monospace; font-size:12px; z-index:999999; position:relative;">
+    <h3>⚠️ Uygulama Hatası (Error Console):</h3>
+    <pre id="error-message" style="white-space: pre-wrap; margin-top: 10px;"></pre>
+    <p style="margin-top: 10px; font-size: 10px; opacity: 0.8;">Not: Çevrimdışıysanız CDN yüklenmemiş olabilir. İnternet bağlantınızı kontrol edin.</p>
+  </div>
+  <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+      var errBox = document.getElementById('error-console');
+      var errMsg = document.getElementById('error-message');
+      if (errBox && errMsg) {
+        errBox.style.display = 'block';
+        errMsg.innerText = message + '\nSatır: ' + lineno + ', Sütun: ' + colno + '\nKaynak: ' + source;
+      }
+      return false;
+    };
+  </script>
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // Default hydebutce project credentials
+    const DEFAULT_FIREBASE_CONFIG = {
+      apiKey: "AIzaSyC0iPHRwDPMa4IvfLfXG-T0Xi6oHNDEk8g",
+      authDomain: "hydebutce.firebaseapp.com",
+      projectId: "hydebutce",
+      storageBucket: "hydebutce.firebasestorage.app",
+      messagingSenderId: "856315746617",
+      appId: "1:856315746617:web:ab3180aa98415cf603f0e8",
+      measurementId: "G-Z9KV3BHNHS"
+    };
+
+    // Categories: Elektrik, Mekanik, İnşaat, Diğer
+    const CATEGORIES = [
+      { id: 'elektrik', name: 'Elektrik ⚡' },
+      { id: 'mekanik', name: 'Mekanik ⚙️' },
+      { id: 'insaat', name: 'İnşaat 🏗️' },
+      { id: 'diger', name: 'Diğer 📦' }
+    ];
+
+    // Expense Types: İşçilik, Malzeme, Şahsi
+    const TYPES = [
+      { id: 'iscilik', name: 'İşçilik 👷' },
+      { id: 'malzeme', name: 'Malzeme 🔩' },
+      { id: 'sahsi', name: 'Şahsi 👤' }
+    ];
+
+    // Payment Methods: Havale, KK, Nakit
+    const PAYMENTS = [
+      { id: 'havale', name: 'Havale 🏦' },
+      { id: 'kk', name: 'Kredi Kartı 💳' },
+      { id: 'nakit', name: 'Nakit 💵' }
+    ];
+
+    function parseDate(dateVal) {
+      if (!dateVal) return new Date();
+      if (typeof dateVal.toDate === 'function') {
+        return dateVal.toDate();
+      }
+      if (dateVal.seconds) {
+        return new Date(dateVal.seconds * 1000);
+      }
+      const d = new Date(dateVal);
+      return isNaN(d.getTime()) ? new Date() : d;
+    }
+
+    function parseAmount(amountVal) {
+      if (amountVal === undefined || amountVal === null) return 0;
+      const str = String(amountVal).replace(',', '.');
+      const num = parseFloat(str);
+      return isNaN(num) ? 0 : num;
+    }
+
+    function formatTL(num) {
+      return new Intl.NumberFormat('tr-TR', { 
+        style: 'currency', 
+        currency: 'TRY', 
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      }).format(num || 0);
+    }
+
+    function formatDateShort(iso) {
+      if (!iso) return '';
+      const d = parseDate(iso);
+      const now = new Date();
+      const timeStr = d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+      if (d.toDateString() === now.toDateString()) {
+        return 'Bugün ' + timeStr;
+      }
+      return d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' }) + ' ' + timeStr;
+    }
+
+    function App() {
+      // Dynamic Projects List (defaults to ['Proje 1'])
+      const [projects, setProjects] = useState(() => {
+        const saved = localStorage.getItem('is_butce_projects');
+        return saved ? JSON.parse(saved) : ['Proje 1'];
+      });
+
+      // Active Project Tab Selection ('ALL_PROJ' representing "Tüm Projeler", or a specific project name)
+      const [activeProject, setActiveProject] = useState(() => localStorage.getItem('is_butce_active_project') || 'ALL_PROJ');
+      
+      // Shared Group Room Code/Password for Firebase Syncing
+      const [roomCode, setRoomCode] = useState(() => localStorage.getItem('is_butce_room_code') || 'is-butce-takip');
+      
+      // Firebase Config
+      const [firebaseConfig, setFirebaseConfig] = useState(() => {
+        try {
+          const saved = localStorage.getItem('is_butce_fb_config');
+          const parsed = saved ? JSON.parse(saved) : null;
+          // Auto-upgrade if it was using the legacy ms-harcama project credentials
+          if (parsed && parsed.projectId === 'ms-harcama') {
+            return DEFAULT_FIREBASE_CONFIG;
+          }
+          return parsed ? parsed : DEFAULT_FIREBASE_CONFIG;
+        } catch (e) {
+          return DEFAULT_FIREBASE_CONFIG;
+        }
+      });
+
+      // Firebase instance state
+      const [db, setDb] = useState(null);
+      const [isOnline, setIsOnline] = useState(false);
+      
+      // Expenses/Transactions list
+      const [expenses, setExpenses] = useState(() => {
+        const saved = localStorage.getItem('is_butce_expenses');
+        return saved ? JSON.parse(saved) : [];
+      });
+
+      // Form Modes: 'GIDER' (Expense) or 'GELIR' (Income/Received Payment)
+      const [formMode, setFormMode] = useState('GIDER');
+
+      // Form Fields
+      const [amount, setAmount] = useState('');
+      const [description, setDescription] = useState('');
+      const [category, setCategory] = useState('elektrik');
+      const [paymentMethod, setPaymentMethod] = useState('havale');
+      const [selectedType, setSelectedType] = useState('iscilik'); // 'iscilik' | 'malzeme' | 'sahsi'
+      const [selectedProject, setSelectedProject] = useState(''); // Target project for transaction
+
+      // Filtering State for the transaction list
+      const [filterProject, setFilterProject] = useState('ALL'); // ALL | Specific Project Name
+      const [filterType, setFilterType] = useState('ALL'); // ALL | Gider (iscilik/malzeme/sahsi) | Gelir (gelir)
+      const [filterCategory, setFilterCategory] = useState('ALL'); // ALL | elektrik | mekanik | insaat | diger
+      const [filterPayment, setFilterPayment] = useState('ALL'); // ALL | havale | kk | nakit
+      const [filterPeriod, setFilterPeriod] = useState('MONTH'); // ALL | TODAY | MONTH
+
+      // Modal Open States
+      const [isStatsOpen, setIsStatsOpen] = useState(false);
+      const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+      const [isAddProjOpen, setIsAddProjOpen] = useState(false);
+      
+      // Add Project Name Temporary Field
+      const [newProjName, setNewProjName] = useState('');
+
+      // Edit Mode State
+      const [editingExpense, setEditingExpense] = useState(null);
+
+      // Save projects to localstorage
+      useEffect(() => {
+        localStorage.setItem('is_butce_projects', JSON.stringify(projects));
+      }, [projects]);
+
+      // Save activeProject to localstorage
+      useEffect(() => {
+        localStorage.setItem('is_butce_active_project', activeProject);
+        // Default the form's target project to the currently active project tab (if it's not "Tüm Projeler")
+        if (activeProject !== 'ALL_PROJ') {
+          setSelectedProject(activeProject);
+        } else if (projects.length > 0) {
+          setSelectedProject(projects[0]);
+        }
+      }, [activeProject, projects]);
+
+      // Save roomCode to localstorage
+      useEffect(() => {
+        localStorage.setItem('is_butce_room_code', roomCode);
+      }, [roomCode]);
+
+      // Save config to localstorage
+      useEffect(() => {
+        localStorage.setItem('is_butce_fb_config', JSON.stringify(firebaseConfig));
+      }, [firebaseConfig]);
+
+      // Save expenses locally
+      useEffect(() => {
+        localStorage.setItem('is_butce_expenses', JSON.stringify(expenses));
+      }, [expenses]);
+
+      // Initialize Firebase & Subscribe to updates
+      useEffect(() => {
+        if (typeof firebase === 'undefined') {
+          console.warn("Firebase script not loaded. Offline local mode active.");
+          setIsOnline(false);
+          return;
+        }
+
+        try {
+          const appName = "is_butce_app_" + roomCode;
+          let app = firebase.apps.find(a => a.name === appName);
+          if (!app) {
+            app = firebase.initializeApp(firebaseConfig, appName);
+          }
+          const firestoreDb = app.firestore();
+          setDb(firestoreDb);
+          setIsOnline(true);
+
+          // Listen to transactions list
+          const colRef = firestoreDb
+            .collection('families')
+            .doc(roomCode)
+            .collection('expenses');
+            
+          const unsubscribe = colRef
+            .orderBy('date', 'desc')
+            .onSnapshot((snapshot) => {
+              const cloudExpenses = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+              }));
+              const sorted = cloudExpenses.sort((a, b) => parseDate(b.date).getTime() - parseDate(a.date).getTime());
+              setExpenses(sorted);
+              setIsOnline(true);
+            }, (error) => {
+              console.error("Firestore transaction sync error:", error);
+              setIsOnline(false);
+            });
+
+          // Listen to dynamic projects list metadata from Firebase
+          const metaRef = firestoreDb.collection('families').doc(roomCode);
+          const unsubscribeMeta = metaRef.onSnapshot((docSnap) => {
+            if (docSnap.exists && docSnap.data().projects) {
+              setProjects(docSnap.data().projects);
+            }
+          }, (err) => {
+            console.error("Firestore metadata projects sync error:", err);
+          });
+
+          return () => {
+            unsubscribe();
+            unsubscribeMeta();
+          };
+        } catch (e) {
+          console.error("Firebase connection failed:", e);
+          setIsOnline(false);
+        }
+      }, [roomCode, firebaseConfig]);
+
+      // Handle Adding Projects
+      const handleAddProject = async (e) => {
+        e.preventDefault();
+        const cleaned = newProjName.trim();
+        if (!cleaned) return;
+        if (projects.includes(cleaned)) {
+          alert("Bu proje ismi zaten mevcut!");
+          return;
+        }
+
+        const updated = [...projects, cleaned];
+        setProjects(updated);
+        setActiveProject(cleaned); // Switch to the newly created project
+
+        if (db && isOnline) {
+          try {
+            await db.collection('families').doc(roomCode).set({ projects: updated }, { merge: true });
+          } catch (err) {
+            console.error("Error saving projects metadata to cloud:", err);
+          }
+        }
+
+        setNewProjName('');
+        setIsAddProjOpen(false);
+      };
+
+      // Handle Deleting Projects (Safely)
+      const handleDeleteProject = async (nameToDelete) => {
+        if (projects.length <= 1) {
+          alert("En az bir adet proje bulunmalıdır!");
+          return;
+        }
+        if (!confirm(`"${nameToDelete}" projesini silmek istediğinize emin misiniz? (Bu işlem sadece proje ismini siler, kayıtları silmez)`)) {
+          return;
+        }
+
+        const updated = projects.filter(p => p !== nameToDelete);
+        setProjects(updated);
+        
+        if (activeProject === nameToDelete) {
+          setActiveProject('ALL_PROJ');
+        }
+
+        if (db && isOnline) {
+          try {
+            await db.collection('families').doc(roomCode).set({ projects: updated }, { merge: true });
+          } catch (err) {
+            console.error("Error deleting project metadata from cloud:", err);
+          }
+        }
+      };
+
+      // Handlers
+      const handleAddExpense = async (e) => {
+        e.preventDefault();
+        const num = parseFloat(amount.replace(',', '.'));
+        if (isNaN(num) || num <= 0 || !description.trim()) {
+          alert("Lütfen geçerli bir tutar ve açıklama girin.");
+          return;
+        }
+
+        const targetProj = selectedProject || (activeProject !== 'ALL_PROJ' ? activeProject : projects[0]);
+
+        if (!targetProj) {
+          alert("Lütfen geçerli bir proje seçildiğinden emin olun.");
+          return;
+        }
+
+        const newExp = {
+          amount: num,
+          description: description.trim(),
+          project: targetProj,
+          paymentMethod: paymentMethod,
+          isIncome: formMode === 'GELIR', // true if Income, false if Gider
+          date: new Date().toISOString()
+        };
+
+        // If it's a Gider (Expense), attach types and categories
+        if (formMode === 'GIDER') {
+          newExp.type = selectedType;
+          newExp.category = category;
+        }
+
+        if (isOnline && db) {
+          try {
+            await db.collection('families').doc(roomCode).collection('expenses').add(newExp);
+          } catch (err) {
+            console.error("Cloud write failed, saving locally:", err);
+            const localNew = { ...newExp, id: 'local-' + Date.now() };
+            setExpenses(prev => [localNew, ...prev]);
+          }
+        } else {
+          // Local storage mode
+          const localNew = { ...newExp, id: 'local-' + Date.now() };
+          setExpenses(prev => [localNew, ...prev]);
+        }
+
+        // Reset inputs
+        setAmount('');
+        setDescription('');
+      };
+
+      const handleDeleteExpense = async (id) => {
+        if (!confirm("Bu kaydı silmek istediğinize emin misiniz?")) return;
+
+        if (isOnline && db && !String(id).startsWith('local-')) {
+          try {
+            await db.collection('families').doc(roomCode).collection('expenses').doc(id).delete();
+          } catch (err) {
+            console.error("Could not delete from cloud:", err);
+          }
+        } else {
+          setExpenses(prev => prev.filter(item => item.id !== id));
+        }
+      };
+
+      const handleSaveEdit = async (e) => {
+        e.preventDefault();
+        if (!editingExpense) return;
+
+        const num = parseFloat(String(editingExpense.amount).replace(',', '.'));
+        if (isNaN(num) || num <= 0 || !editingExpense.description.trim()) {
+          alert("Lütfen geçerli değerler girin.");
+          return;
+        }
+
+        const updatedData = {
+          amount: num,
+          description: editingExpense.description.trim(),
+          project: editingExpense.project,
+          paymentMethod: editingExpense.paymentMethod,
+          isIncome: !!editingExpense.isIncome,
+          date: editingExpense.date
+        };
+
+        if (!editingExpense.isIncome) {
+          updatedData.type = editingExpense.type || 'iscilik';
+          updatedData.category = editingExpense.category || 'elektrik';
+        } else {
+          updatedData.type = firebase.firestore.FieldValue.delete ? firebase.firestore.FieldValue.delete() : null;
+          updatedData.category = firebase.firestore.FieldValue.delete ? firebase.firestore.FieldValue.delete() : null;
+        }
+
+        if (isOnline && db && !String(editingExpense.id).startsWith('local-')) {
+          try {
+            await db.collection('families')
+              .doc(roomCode)
+              .collection('expenses')
+              .doc(editingExpense.id)
+              .update(updatedData);
+          } catch (err) {
+            console.error("Cloud update failed:", err);
+          }
+        } else {
+          setExpenses(prev => prev.map(item => item.id === editingExpense.id ? { ...item, ...updatedData } : item));
+        }
+
+        setEditingExpense(null);
+      };
+
+      // Financial Calculations for selected Project Tab
+      const finances = useMemo(() => {
+        // Filter by active project tab
+        const projExps = expenses.filter(e => activeProject === 'ALL_PROJ' || e.project === activeProject);
+        const now = new Date();
+
+        // Totals
+        let totalIncome = 0; // Total received payments
+        let totalExpense = 0; // Total expenses (giderler)
+        let todayExpense = 0; // Today's expenses
+        let monthExpense = 0; // This month's expenses
+
+        projExps.forEach(e => {
+          const amt = parseAmount(e.amount);
+          const d = parseDate(e.date);
+
+          if (e.isIncome) {
+            totalIncome += amt;
+          } else {
+            totalExpense += amt;
+            // Today check
+            if (d.toDateString() === now.toDateString()) {
+              todayExpense += amt;
+            }
+            // Month check
+            if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) {
+              monthExpense += amt;
+            }
+          }
+        });
+
+        const netBalance = totalIncome - totalExpense;
+
+        return {
+          totalIncome,
+          totalExpense,
+          netBalance,
+          todayExpense,
+          monthExpense
+        };
+      }, [expenses, activeProject]);
+
+      // Progress bar breakdown for active project & current month (İşçilik, Malzeme, Şahsi)
+      const monthlyTypeDistribution = useMemo(() => {
+        const now = new Date();
+        const monthlyGiders = expenses.filter(e => {
+          const d = parseDate(e.date);
+          return (activeProject === 'ALL_PROJ' || e.project === activeProject) && 
+                 !e.isIncome && 
+                 d.getFullYear() === now.getFullYear() && 
+                 d.getMonth() === now.getMonth();
+        });
+
+        const totals = { iscilik: 0, malzeme: 0, sahsi: 0 };
+        monthlyGiders.forEach(e => {
+          if (totals[e.type] !== undefined) {
+            totals[e.type] += parseAmount(e.amount);
+          }
+        });
+
+        const sum = totals.iscilik + totals.malzeme + totals.sahsi;
+
+        return {
+          iscilik: totals.iscilik,
+          malzeme: totals.malzeme,
+          sahsi: totals.sahsi,
+          total: sum,
+          iscilikPct: sum > 0 ? Math.round((totals.iscilik / sum) * 100) : 0,
+          malzemePct: sum > 0 ? Math.round((totals.malzeme / sum) * 100) : 0,
+          sahsiPct: sum > 0 ? Math.round((totals.sahsi / sum) * 100) : 0
+        };
+      }, [expenses, activeProject]);
+
+      // Filtered expenses list shown in Table
+      const filteredExpenses = useMemo(() => {
+        return expenses.filter(e => {
+          // Dynamic Project filter (from top tab activeProject OR list filterProject dropdown)
+          const currentProjFilter = activeProject !== 'ALL_PROJ' ? activeProject : filterProject;
+          if (currentProjFilter !== 'ALL' && currentProjFilter !== 'ALL_PROJ' && e.project !== currentProjFilter) return false;
+          
+          // Gelir/Gider filter
+          if (filterType === 'GELIR' && !e.isIncome) return false;
+          if (filterType === 'GIDER' && e.isIncome) return false;
+          if (filterType !== 'ALL' && filterType !== 'GELIR' && filterType !== 'GIDER') {
+            // Specific expense type selected: 'iscilik', 'malzeme', 'sahsi'
+            if (e.isIncome || e.type !== filterType) return false;
+          }
+
+          // Category filter (only makes sense for expenses)
+          if (filterCategory !== 'ALL') {
+            if (e.isIncome || e.category !== filterCategory) return false;
+          }
+
+          // Payment Method filter
+          if (filterPayment !== 'ALL' && e.paymentMethod !== filterPayment) return false;
+
+          // Period filter
+          const d = parseDate(e.date);
+          const now = new Date();
+          if (filterPeriod === 'TODAY' && d.toDateString() !== now.toDateString()) return false;
+          if (filterPeriod === 'MONTH' && (d.getFullYear() !== now.getFullYear() || d.getMonth() !== now.getMonth())) return false;
+          
+          return true;
+        });
+      }, [expenses, activeProject, filterProject, filterType, filterCategory, filterPayment, filterPeriod]);
+
+      // Total sum of the currently filtered items in the list
+      const filteredTotalAmount = useMemo(() => {
+        return filteredExpenses.reduce((sum, e) => sum + parseAmount(e.amount), 0);
+      }, [filteredExpenses]);
+
+      // Breakdown calculations for the active month (Stats)
+      const statsData = useMemo(() => {
+        const now = new Date();
+        const activeMonthExps = expenses.filter(e => {
+          const d = parseDate(e.date);
+          return (activeProject === 'ALL_PROJ' || e.project === activeProject) && 
+                 d.getFullYear() === now.getFullYear() && 
+                 d.getMonth() === now.getMonth();
+        });
+
+        const monthGelirSum = activeMonthExps.filter(e => e.isIncome).reduce((sum, e) => sum + parseAmount(e.amount), 0);
+        const monthGiderSum = activeMonthExps.filter(e => !e.isIncome).reduce((sum, e) => sum + parseAmount(e.amount), 0);
+
+        // Group by Category
+        const categoryBreakdown = CATEGORIES.map(cat => {
+          const sum = activeMonthExps.filter(e => !e.isIncome && e.category === cat.id).reduce((s, e) => s + parseAmount(e.amount), 0);
+          return {
+            ...cat,
+            total: sum,
+            pct: monthGiderSum > 0 ? Math.round((sum / monthGiderSum) * 100) : 0
+          };
+        }).sort((a,b) => b.total - a.total);
+
+        // Group by Type
+        const typeBreakdown = TYPES.map(t => {
+          const sum = activeMonthExps.filter(e => !e.isIncome && e.type === t.id).reduce((s, e) => s + parseAmount(e.amount), 0);
+          return {
+            ...t,
+            total: sum,
+            pct: monthGiderSum > 0 ? Math.round((sum / monthGiderSum) * 100) : 0
+          };
+        }).sort((a,b) => b.total - a.total);
+
+        // Group by Payment (all transactions combined)
+        const totalSumAll = monthGelirSum + monthGiderSum;
+        const paymentBreakdown = PAYMENTS.map(p => {
+          const sum = activeMonthExps.filter(e => e.paymentMethod === p.id).reduce((s, e) => s + parseAmount(e.amount), 0);
+          return {
+            ...p,
+            total: sum,
+            pct: totalSumAll > 0 ? Math.round((sum / totalSumAll) * 100) : 0
+          };
+        }).sort((a,b) => b.total - a.total);
+
+        return {
+          gelir: monthGelirSum,
+          gider: monthGiderSum,
+          count: activeMonthExps.length,
+          categories: categoryBreakdown.filter(x => x.total > 0),
+          types: typeBreakdown.filter(x => x.total > 0),
+          payments: paymentBreakdown.filter(x => x.total > 0)
+        };
+      }, [expenses, activeProject]);
+
+      // Day calculations helper
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const currentDay = now.getDate();
+      const daysRemaining = lastDayOfMonth - currentDay;
+      const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+      const activeMonthName = monthNames[currentMonth];
+
+      return (
+        <div className="app-container">
+          
+          {/* Dynamic Top Projects Selector */}
+          <div className="project-tabs-container">
+            <button
+              onClick={() => setActiveProject('ALL_PROJ')}
+              className={`proj-tab-btn ${activeProject === 'ALL_PROJ' ? 'active' : ''}`}
+            >
+              🌐 Tüm Projeler
+            </button>
+            {projects.map((p, index) => (
+              <button
+                key={index}
+                onClick={() => setActiveProject(p)}
+                className={`proj-tab-btn ${activeProject === p ? 'active' : ''}`}
+              >
+                🏗️ {p}
+              </button>
+            ))}
+            <button
+              onClick={() => setIsAddProjOpen(true)}
+              className="proj-tab-btn add-btn"
+            >
+              ➕ Yeni Proje
+            </button>
+          </div>
+
+          {/* Header Panel */}
+          <div className="card" style={{ paddingBottom: '12px' }}>
+            <div className="header-bar">
+              <div className="brand-title">
+                🏗️ İş Bütçe Takip
+              </div>
+              <span 
+                onClick={() => setIsSettingsOpen(true)}
+                className={`sync-badge ${isOnline ? 'online' : 'offline'}`}
+                title="Eşleştirme Ayarlarını Aç"
+              >
+                {isOnline ? `⚡ Canlı: ${roomCode}` : '⚠️ Çevrimdışı (Local)'}
+              </span>
+            </div>
+            
+            <p style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+              Aktif Proje Görünümü: <strong>{activeProject === 'ALL_PROJ' ? 'Tüm Projeler Birleşik' : activeProject}</strong>.
+            </p>
+          </div>
+
+          {/* Structured Financial Summary Table & Day Counter */}
+          <div className="card" style={{ padding: '0px', overflow: 'hidden' }}>
+            <div className="summary-grid">
+              <div className="summary-cell">
+                <span className="label">🟢 Gelen Ödeme (Gelir)</span>
+                <span className="val gelir">{formatTL(finances.totalIncome)}</span>
+              </div>
+              <div className="summary-cell">
+                <span className="label">🔴 Harcanan (Gider)</span>
+                <span className="val gider">{formatTL(finances.totalExpense)}</span>
+              </div>
+            </div>
+            <div className="summary-grid bottom">
+              <div className="summary-cell full-width">
+                <span className="label">🔵 Kalan Net Bakiye</span>
+                <span className={`val bakiye ${finances.netBalance >= 0 ? 'pozitif' : 'negatif'}`}>
+                  {finances.netBalance >= 0 ? '+' : ''}{formatTL(finances.netBalance)}
+                </span>
+              </div>
+            </div>
+
+            <div className="summary-grid" style={{ borderTop: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.1)' }}>
+              <div className="summary-cell" style={{ padding: '8px' }}>
+                <span className="label" style={{ fontSize: '0.62rem' }}>Bugünkü Gider</span>
+                <span className="val" style={{ fontSize: '1rem', color: '#fbbf24' }}>{formatTL(finances.todayExpense)}</span>
+              </div>
+              <div className="summary-cell" style={{ padding: '8px' }}>
+                <span className="label" style={{ fontSize: '0.62rem' }}>Bu Ayki Gider</span>
+                <span className="val" style={{ fontSize: '1rem', color: '#38bdf8' }}>{formatTL(finances.monthExpense)}</span>
+              </div>
+            </div>
+
+            {/* 3-Way Budget Distribution Progress Bar */}
+            <div className="couple-bar-container">
+              <div className="couple-bar-labels">
+                <span style={{ color: 'var(--color-iscilik)' }}>
+                  İşçilik: <strong>{formatTL(monthlyTypeDistribution.iscilik)}</strong> ({monthlyTypeDistribution.iscilikPct}%)
+                </span>
+                <span style={{ color: 'var(--color-malzeme)' }}>
+                  Malzeme: <strong>{formatTL(monthlyTypeDistribution.malzeme)}</strong> ({monthlyTypeDistribution.malzemePct}%)
+                </span>
+                <span style={{ color: 'var(--color-sahsi)' }}>
+                  Şahsi: <strong>{formatTL(monthlyTypeDistribution.sahsi)}</strong> ({monthlyTypeDistribution.sahsiPct}%)
+                </span>
+              </div>
+              <div className="couple-progress-track">
+                <div 
+                  className="progress-segment iscilik" 
+                  style={{ width: `${monthlyTypeDistribution.iscilikPct}%` }}
+                  title={`İşçilik: ${formatTL(monthlyTypeDistribution.iscilik)}`}
+                />
+                <div 
+                  className="progress-segment malzeme" 
+                  style={{ width: `${monthlyTypeDistribution.malzemePct}%` }}
+                  title={`Malzeme: ${formatTL(monthlyTypeDistribution.malzeme)}`}
+                />
+                <div 
+                  className="progress-segment sahsi" 
+                  style={{ width: `${monthlyTypeDistribution.sahsiPct}%` }}
+                  title={`Şahsi: ${formatTL(monthlyTypeDistribution.sahsi)}`}
+                />
+              </div>
+            </div>
+
+            {/* Elegant Day Counter Bar */}
+            <div className="day-counter-row">
+              ⏳ {activeMonthName} ayının {currentDay}. günündeyiz • <strong>{daysRemaining} gün</strong> sonra yeni ay başlayacak.
+            </div>
+          </div>
+
+          {/* Form Card for Entering Transactions */}
+          <div className="card">
+            {/* Form Mode Selector: Gider vs Gelir */}
+            <div className="tx-type-switcher">
+              <button 
+                type="button"
+                onClick={() => setFormMode('GIDER')}
+                className={`tx-type-btn ${formMode === 'GIDER' ? 'active gider' : ''}`}
+              >
+                🔴 Gider Ekle (Harcama)
+              </button>
+              <button 
+                type="button"
+                onClick={() => setFormMode('GELIR')}
+                className={`tx-type-btn ${formMode === 'GELIR' ? 'active gelir' : ''}`}
+              >
+                🟢 Ödeme Alındı (Gelir)
+              </button>
+            </div>
+
+            <div style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '12px', color: '#fff' }}>
+              ➕ {formMode === 'GIDER' ? 'Yeni Gider/Harcama Girişi' : 'Yeni Ödeme/Hak Girişi'}
+            </div>
+
+            <form onSubmit={handleAddExpense}>
+              <div className="form-grid">
+                
+                {/* Tutar Girişi */}
+                <div className="form-group">
+                  <label className="form-label">Tutar (TL)</label>
+                  <div className="amount-input-box">
+                    <span className="amount-symbol">₺</span>
+                    <input 
+                      type="number" 
+                      step="any"
+                      placeholder="0.00"
+                      value={amount}
+                      onChange={e => setAmount(e.target.value)}
+                      className="input-field"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Hedef Proje Seçimi */}
+                <div className="form-group">
+                  <label className="form-label">Hedef Proje</label>
+                  <select
+                    value={selectedProject}
+                    onChange={e => setSelectedProject(e.target.value)}
+                    className="input-field"
+                    style={{ background: 'var(--bg-input)', color: '#fff' }}
+                  >
+                    {projects.map((p, idx) => <option key={idx} value={p}>{p}</option>)}
+                  </select>
+                </div>
+
+                {/* Gider Türü (Sadece Gider formunda gösterilir) */}
+                {formMode === 'GIDER' && (
+                  <div className="form-group full">
+                    <label className="form-label">Gider Türü</label>
+                    <div className="toggle-group">
+                      {TYPES.map(t => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setSelectedType(t.id)}
+                          className={`toggle-btn ${t.id} ${selectedType === t.id ? 'active' : ''}`}
+                        >
+                          {t.name.split(' ')[0]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Kategori Seçimi (Sadece Gider formunda gösterilir) */}
+                {formMode === 'GIDER' && (
+                  <div className="form-group full">
+                    <label className="form-label">Gider Kategorisi</label>
+                    <div className="cat-grid">
+                      {CATEGORIES.map(c => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setCategory(c.id)}
+                          className={`cat-btn ${category === c.id ? 'active' : ''}`}
+                        >
+                          <span className="emoji">{c.name.split(' ')[1]}</span>
+                          <span>{c.name.split(' ')[0]}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Ödeme Yöntemi Seçimi */}
+                <div className="form-group full">
+                  <label className="form-label">Kasa / Ödeme Kanalı</label>
+                  <div className="toggle-group">
+                    {PAYMENTS.map(p => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setPaymentMethod(p.id)}
+                        className={`toggle-btn payment ${paymentMethod === p.id ? 'active' : ''}`}
+                      >
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Açıklama Girişi */}
+                <div className="form-group full">
+                  <label className="form-label">Açıklama / Detay</label>
+                  <input 
+                    type="text" 
+                    placeholder={formMode === 'GIDER' ? "Örn. Kablo alımı, sıva yevmiyesi, benzin..." : "Örn. 1. hakediş ödemesi, cepten aktarılan avans..."}
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    className="input-field"
+                    required
+                  />
+                </div>
+
+              </div>
+
+              <button type="submit" className="submit-btn mt-4">
+                💾 İşlemi Kaydet
+              </button>
+            </form>
+          </div>
+
+          {/* Gelişmiş Filtreler */}
+          <div className="card" style={{ paddingBottom: '10px' }}>
+            
+            {/* Project Filter - only shown in "Tüm Projeler" tab view */}
+            {activeProject === 'ALL_PROJ' && (
+              <div className="filter-section">
+                <div className="filter-title">🏗️ Proje Filtresi</div>
+                <div className="filter-scroll">
+                  <button 
+                    onClick={() => setFilterProject('ALL')} 
+                    className={`filter-pill ${filterProject === 'ALL' ? 'active' : ''}`}
+                  >
+                    Hepsi (Tüm Projeler)
+                  </button>
+                  {projects.map((p, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setFilterProject(p)}
+                      className={`filter-pill ${filterProject === p ? 'active' : ''}`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Income vs Expense Filter */}
+            <div className="filter-section">
+              <div className="filter-title">🔍 İşlem Türü Filtresi</div>
+              <div className="filter-scroll">
+                <button 
+                  onClick={() => setFilterType('ALL')} 
+                  className={`filter-pill ${filterType === 'ALL' ? 'active' : ''}`}
+                >
+                  Gelen & Giden Hepsi
+                </button>
+                <button 
+                  onClick={() => setFilterType('GELIR')} 
+                  className={`filter-pill ${filterType === 'GELIR' ? 'active' : ''}`}
+                >
+                  Sadece Gelen Ödemeler
+                </button>
+                <button 
+                  onClick={() => setFilterType('GIDER')} 
+                  className={`filter-pill ${filterType === 'GIDER' ? 'active' : ''}`}
+                >
+                  Sadece Giderler (Tümü)
+                </button>
+                {TYPES.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setFilterType(t.id)}
+                    className={`filter-pill ${filterType === t.id ? 'active' : ''}`}
+                  >
+                    Gider: {t.name.split(' ')[0]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Category Filter */}
+            <div className="filter-section">
+              <div className="filter-title">📁 Harcama Kategorisi Filtresi</div>
+              <div className="filter-scroll">
+                <button 
+                  onClick={() => setFilterCategory('ALL')} 
+                  className={`filter-pill ${filterCategory === 'ALL' ? 'active' : ''}`}
+                >
+                  Tüm Kategoriler
+                </button>
+                {CATEGORIES.map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => setFilterCategory(c.id)}
+                    className={`filter-pill ${filterCategory === c.id ? 'active' : ''}`}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Kasa ve Tarih */}
+            <div className="filter-section">
+              <div className="filter-title">💳 Kasa Tipi & Tarih Filtresi</div>
+              <div className="filter-scroll">
+                <button 
+                  onClick={() => setFilterPayment('ALL')} 
+                  className={`filter-pill ${filterPayment === 'ALL' ? 'active' : ''}`}
+                >
+                  Tüm Kasalar
+                </button>
+                {PAYMENTS.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => setFilterPayment(p.id)}
+                    className={`filter-pill ${filterPayment === p.id ? 'active' : ''}`}
+                  >
+                    {p.name.split(' ')[0]}
+                  </button>
+                ))}
+                
+                <span style={{ color: 'rgba(255,255,255,0.15)', alignSelf: 'center' }}>|</span>
+
+                <button 
+                  onClick={() => setFilterPeriod('ALL')} 
+                  className={`filter-pill ${filterPeriod === 'ALL' ? 'active' : ''}`}
+                >
+                  Tüm Zamanlar
+                </button>
+                <button 
+                  onClick={() => setFilterPeriod('TODAY')} 
+                  className={`filter-pill ${filterPeriod === 'TODAY' ? 'active' : ''}`}
+                >
+                  Bugün
+                </button>
+                <button 
+                  onClick={() => setFilterPeriod('MONTH')} 
+                  className={`filter-pill ${filterPeriod === 'MONTH' ? 'active' : ''}`}
+                >
+                  Bu Ay
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Gider/Gelir List Table */}
+          <div className="card" style={{ padding: '0px', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 14px 8px 14px', fontSize: '0.9rem', fontWeight: 800, color: '#fff' }}>
+              📋 İşlem Defteri ({filteredExpenses.length} Kayıt)
+            </div>
+
+            {filteredExpenses.length === 0 ? (
+              <div className="empty-state">
+                <span className="icon">📂</span>
+                <p>Kayıt Bulunmamaktadır</p>
+                <span>Filtrelere veya seçili projeye uygun kayıt bulunamadı.</span>
+              </div>
+            ) : (
+              <div className="table-container">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '20%' }}>Tarih</th>
+                      <th style={{ width: '45%' }}>Detay / Sınıf</th>
+                      <th style={{ width: '25%' }} className="amount-cell">Tutar</th>
+                      <th style={{ width: '10%', textAlign: 'center' }}>İşlem</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredExpenses.map(e => {
+                      // Safe extraction of category emoji
+                      const catObj = !e.isIncome ? CATEGORIES.find(c => c.id === e.category) : null;
+                      const catEmoji = catObj ? catObj.name.split(' ')[1] : (!e.isIncome ? '📦' : '💰');
+                      
+                      // Safe extraction of payment method
+                      const payObj = PAYMENTS.find(p => p.id === e.paymentMethod);
+                      const payName = payObj ? payObj.name.split(' ')[0] : 'Ödeme';
+
+                      // Safe extraction of expense type
+                      const typeObj = !e.isIncome ? TYPES.find(t => t.id === e.type) : null;
+                      const typeName = typeObj ? typeObj.name.split(' ')[0] : 'Gider';
+                      
+                      return (
+                        <tr key={e.id}>
+                          <td>
+                            <div style={{ fontSize: '0.76rem', color: '#94a3b8' }}>
+                              {formatDateShort(e.date).split(' ')[0]}
+                            </div>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                              {formatDateShort(e.date).split(' ')[1]}
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 600, fontSize: '0.82rem', marginBottom: '2px', color: '#f8fafc' }}>
+                              {e.description}
+                            </div>
+                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                              {/* Project Tag (only shown if viewing all projects combined) */}
+                              {activeProject === 'ALL_PROJ' && (
+                                <span className="badge project-badge" title={e.project}>
+                                  🏗️ {e.project}
+                                </span>
+                              )}
+                              {e.isIncome ? (
+                                <span className="badge gelir-badge">Gelen Ödeme</span>
+                              ) : (
+                                <span className={`badge ${e.type || 'iscilik'}`}>
+                                  {typeName}
+                                </span>
+                              )}
+                              {!e.isIncome && (
+                                <span style={{ fontSize: '0.72rem' }}>
+                                  {catEmoji}
+                                </span>
+                              )}
+                              <span className={`badge ${e.paymentMethod || 'havale'}`}>
+                                {payName}
+                              </span>
+                            </div>
+                          </td>
+                          <td className={`amount-cell ${e.isIncome ? 'plus' : 'minus'}`}>
+                            {e.isIncome ? '+' : '-'}{formatTL(e.amount)}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '4px' }}>
+                              <button 
+                                onClick={() => setEditingExpense(e)} 
+                                className="action-btn" 
+                                title="Düzenle"
+                              >
+                                ✏️
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteExpense(e.id)} 
+                                className="action-btn del" 
+                                title="Sil"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="table-footer-summary">
+              <span>Filtrelenmiş Toplam:</span>
+              <span className="amount">{formatTL(filteredTotalAmount)}</span>
+            </div>
+          </div>
+
+          {/* Floating Navigation */}
+          <div className="bottom-nav">
+            <button 
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} 
+              className="nav-item active"
+            >
+              <span className="icon">➕</span>
+              <span>Gider Ekle</span>
+            </button>
+            <button 
+              onClick={() => setIsStatsOpen(true)} 
+              className="nav-item"
+            >
+              <span className="icon">📊</span>
+              <span>Analiz</span>
+            </button>
+            <button 
+              onClick={() => setIsSettingsOpen(true)} 
+              className="nav-item"
+            >
+              <span className="icon">⚙️</span>
+              <span>Ayarlar</span>
+            </button>
+          </div>
+
+          {/* ADD PROJECT MODAL */}
+          {isAddProjOpen && (
+            <div className="modal-overlay" onClick={() => setIsAddProjOpen(false)}>
+              <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <div className="modal-title">➕ Yeni Proje / Şantiye Ekle</div>
+                  <button className="close-btn" onClick={() => setIsAddProjOpen(false)}>×</button>
+                </div>
+                
+                <form onSubmit={handleAddProject}>
+                  <div className="form-group">
+                    <label className="form-label">Proje / Şantiye Adı</label>
+                    <input 
+                      type="text" 
+                      placeholder="Örn: Proje 2, Villa Şantiyesi..."
+                      value={newProjName}
+                      onChange={e => setNewProjName(e.target.value)}
+                      className="input-field"
+                      required
+                      autoFocus
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                    <button type="button" className="submit-btn" style={{ background: '#374151' }} onClick={() => setIsAddProjOpen(false)}>
+                      İptal
+                    </button>
+                    <button type="submit" className="submit-btn">
+                      💾 Ekle
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* STATS / ANALYSIS MODAL */}
+          {isStatsOpen && (
+            <div className="modal-overlay" onClick={() => setIsStatsOpen(false)}>
+              <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <div className="modal-title">📊 Aylık Gider Analizleri</div>
+                  <button className="close-btn" onClick={() => setIsStatsOpen(false)}>×</button>
+                </div>
+
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '-6px' }}>
+                  Proje: <strong>{activeProject === 'ALL_PROJ' ? 'Tüm Projeler' : activeProject}</strong> ({activeMonthName} Ayı)
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div style={{ background: 'rgba(16, 185, 129, 0.06)', padding: '10px', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.15)', textAlign: 'center' }}>
+                    <span style={{ fontSize: '0.62rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase' }}>Gelen Ödemeler</span>
+                    <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#10b981' }}>{formatTL(statsData.gelir)}</span>
+                  </div>
+                  <div style={{ background: 'rgba(239, 68, 68, 0.06)', padding: '10px', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.15)', textAlign: 'center' }}>
+                    <span style={{ fontSize: '0.62rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase' }}>Toplam Harcama</span>
+                    <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f87171' }}>{formatTL(statsData.gider)}</span>
+                  </div>
+                </div>
+
+                <div className="stats-container">
+                  
+                  {/* Category stats */}
+                  <div>
+                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#94a3b8', margin: '8px 0 6px 0', letterSpacing: '0.5px' }}>
+                      Gider Kategorisi Dağılımı
+                    </h4>
+                    {statsData.categories.length === 0 ? (
+                      <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Bu ay gider verisi yok.</p>
+                    ) : (
+                      statsData.categories.map(c => (
+                        <div key={c.id} className="stat-row" style={{ marginBottom: '6px' }}>
+                          <div className="stat-meta">
+                            <span>{c.name}</span>
+                            <span>{formatTL(c.total)} ({c.pct}%)</span>
+                          </div>
+                          <div className="stat-bar">
+                            <div className="stat-fill" style={{ width: `${c.pct}%`, background: 'var(--color-accent)' }} />
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Type stats */}
+                  <div style={{ marginTop: '6px' }}>
+                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#94a3b8', margin: '8px 0 6px 0', letterSpacing: '0.5px' }}>
+                      Gider Tipi Dağılımı
+                    </h4>
+                    {statsData.types.length === 0 ? (
+                      <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Bu ay gider verisi yok.</p>
+                    ) : (
+                      statsData.types.map(t => {
+                        let barColor = 'var(--color-iscilik)';
+                        if (t.id === 'malzeme') barColor = 'var(--color-malzeme)';
+                        if (t.id === 'sahsi') barColor = 'var(--color-sahsi)';
+                        
+                        return (
+                          <div key={t.id} className="stat-row" style={{ marginBottom: '6px' }}>
+                            <div className="stat-meta">
+                              <span>{t.name}</span>
+                              <span>{formatTL(t.total)} ({t.pct}%)</span>
+                            </div>
+                            <div className="stat-bar">
+                              <div className="stat-fill" style={{ width: `${t.pct}%`, background: barColor }} />
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Payment method stats */}
+                  <div style={{ marginTop: '6px' }}>
+                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#94a3b8', margin: '8px 0 6px 0', letterSpacing: '0.5px' }}>
+                      Ödeme Kanalı Dağılımı (Kasa)
+                    </h4>
+                    {statsData.payments.length === 0 ? (
+                      <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Bu ay veri yok.</p>
+                    ) : (
+                      statsData.payments.map(p => (
+                        <div key={p.id} className="stat-row" style={{ marginBottom: '6px' }}>
+                          <div className="stat-meta">
+                            <span>{p.name}</span>
+                            <span>{formatTL(p.total)} ({p.pct}%)</span>
+                          </div>
+                          <div className="stat-bar">
+                            <div className="stat-fill" style={{ width: `${p.pct}%`, background: '#f59e0b' }} />
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                </div>
+
+                <button className="submit-btn" style={{ background: '#374151' }} onClick={() => setIsStatsOpen(false)}>
+                  Kapat
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* SETTINGS / CLOUD SYNC MODAL */}
+          {isSettingsOpen && (
+            <div className="modal-overlay" onClick={() => setIsSettingsOpen(false)}>
+              <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <div className="modal-title">⚙️ Cihaz Eşleştirme & Bulut Ayarı</div>
+                  <button className="close-btn" onClick={() => setIsSettingsOpen(false)}>×</button>
+                </div>
+
+                <div style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.15)', padding: '10px 12px', borderRadius: '12px', fontSize: '0.72rem', color: '#c7d2fe', lineHeight: 1.4 }}>
+                  💡 Farklı telefonlardan şantiye verilerini canlı görmek için her iki cihazda da <strong>Ortak Oda Kodu</strong> aynı olmalıdır.
+                </div>
+
+                {/* Projects Manager section */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label className="form-label">Mevcut Projeler / Şantiyeler</label>
+                  <div className="project-mgmt-list">
+                    {projects.map((p, idx) => (
+                      <div key={idx} className="project-mgmt-item">
+                        <span>🏗️ {p}</span>
+                        <button type="button" onClick={() => handleDeleteProject(p)}>Sil</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="edit-grid" style={{ marginTop: '4px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Ortak Oda Kodu (Şifresi)</label>
+                    <input 
+                      type="text" 
+                      value={roomCode}
+                      onChange={e => setRoomCode(e.target.value.trim().toLowerCase())}
+                      className="input-field text-mono"
+                      placeholder="Örn. is-butce-takip"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Firebase Config JSON (Opsiyonel)</label>
+                    <textarea 
+                      rows={4}
+                      value={JSON.stringify(firebaseConfig, null, 2)}
+                      onChange={e => {
+                        try {
+                          const parsed = JSON.parse(e.target.value);
+                          setFirebaseConfig(parsed);
+                        } catch (err) {
+                          // Allow editing
+                        }
+                      }}
+                      className="input-field text-mono"
+                      style={{ fontSize: '0.68rem', resize: 'vertical' }}
+                    />
+                    <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      * Boş bırakırsanız veya hatalı JSON girerseniz çevrimdışı (Local) çalışır.
+                    </span>
+                  </div>
+                </div>
+
+                <button className="submit-btn mt-2" onClick={() => setIsSettingsOpen(false)}>
+                  💾 Ayarları Kaydet ve Eşleştir
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* EDIT TRANSACTION MODAL */}
+          {editingExpense && (
+            <div className="modal-overlay" onClick={() => setEditingExpense(null)}>
+              <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <div className="modal-title">✏️ Kaydı Düzenle</div>
+                  <button className="close-btn" onClick={() => setEditingExpense(null)}>×</button>
+                </div>
+
+                <form onSubmit={handleSaveEdit}>
+                  <div className="edit-grid">
+                    
+                    {/* Tutar */}
+                    <div className="form-group">
+                      <label className="form-label">Tutar (TL)</label>
+                      <div className="amount-input-box">
+                        <span className="amount-symbol">₺</span>
+                        <input 
+                          type="number" 
+                          step="any"
+                          value={editingExpense.amount}
+                          onChange={e => setEditingExpense({ ...editingExpense, amount: e.target.value })}
+                          className="input-field"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Hedef Proje */}
+                    <div className="form-group">
+                      <label className="form-label">Hedef Proje</label>
+                      <select 
+                        value={editingExpense.project} 
+                        onChange={e => setEditingExpense({ ...editingExpense, project: e.target.value })}
+                        className="input-field"
+                        style={{ background: 'var(--bg-input)', color: '#fff' }}
+                      >
+                        {projects.map((p, idx) => <option key={idx} value={p}>{p}</option>)}
+                      </select>
+                    </div>
+
+                    {/* İşlem Tipi (Gelen vs Giden) */}
+                    <div className="form-group">
+                      <label className="form-label">İşlem Tipi</label>
+                      <select
+                        value={editingExpense.isIncome ? 'GELIR' : 'GIDER'}
+                        onChange={e => setEditingExpense({ ...editingExpense, isIncome: e.target.value === 'GELIR' })}
+                        className="input-field"
+                        style={{ background: 'var(--bg-input)', color: '#fff' }}
+                      >
+                        <option value="GIDER">🔴 Harcanan (Gider)</option>
+                        <option value="GELIR">🟢 Alınan Ödeme (Gelir)</option>
+                      </select>
+                    </div>
+
+                    {/* Tür (Sadece Giderlerde gösterilir) */}
+                    {!editingExpense.isIncome && (
+                      <div className="form-group">
+                        <label className="form-label">Gider Türü</label>
+                        <div className="toggle-group">
+                          {TYPES.map(t => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => setEditingExpense({ ...editingExpense, type: t.id })}
+                              className={`toggle-btn ${t.id} ${editingExpense.type === t.id ? 'active' : ''}`}
+                            >
+                              {t.name.split(' ')[0]}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Kategori (Sadece Giderlerde gösterilir) */}
+                    {!editingExpense.isIncome && (
+                      <div className="form-group">
+                        <label className="form-label">Gider Kategorisi</label>
+                        <select 
+                          value={editingExpense.category || 'elektrik'} 
+                          onChange={e => setEditingExpense({ ...editingExpense, category: e.target.value })}
+                          className="input-field"
+                          style={{ background: 'var(--bg-input)', color: '#fff' }}
+                        >
+                          {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Kasa/Ödeme Yöntemi */}
+                    <div className="form-group">
+                      <label className="form-label">Kasa / Ödeme Kanalı</label>
+                      <select 
+                        value={editingExpense.paymentMethod} 
+                        onChange={e => setEditingExpense({ ...editingExpense, paymentMethod: e.target.value })}
+                        className="input-field"
+                        style={{ background: 'var(--bg-input)', color: '#fff' }}
+                      >
+                        {PAYMENTS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                    </div>
+
+                    {/* Açıklama */}
+                    <div className="form-group">
+                      <label className="form-label">Açıklama / Detay</label>
+                      <input 
+                        type="text" 
+                        value={editingExpense.description}
+                        onChange={e => setEditingExpense({ ...editingExpense, description: e.target.value })}
+                        className="input-field"
+                        required
+                      />
+                    </div>
+
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+                    <button type="button" className="submit-btn" style={{ background: '#374151' }} onClick={() => setEditingExpense(null)}>
+                      İptal
+                    </button>
+                    <button type="submit" className="submit-btn">
+                      💾 Güncelle
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

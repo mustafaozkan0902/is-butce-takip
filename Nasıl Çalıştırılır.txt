@@ -1,0 +1,34 @@
+İŞ BÜTÇE TAKİP PROGRAMI - KULLANIM REHBERİ
+
+Bu program, iş ve şantiye harcamalarınızı (İşçilik, Malzeme, Şahsi) kolayca takip etmeniz ve diğer cihazlarla anlık eşleştirmeniz için özel olarak geliştirilmiştir.
+
+NASIL ÇALIŞTIRILIR?
+------------------
+1. Bu klasör içerisindeki "index.html" dosyasına çift tıklayarak uygulamayı herhangi bir internet tarayıcısında (Chrome, Safari, Edge vb.) doğrudan açabilirsiniz.
+2. Herhangi bir sunucu kurulumu veya yükleme (npm/node) gerektirmez. Dosyayı çift tıklayıp açmanız yeterlidir.
+
+TEMEL ÖZELLİKLER & KULLANIM:
+----------------------------
+* ÜST SEKMELER (İşçilik, Malzeme, Şahsi):
+  Ekranın en üstündeki sekmeler, aktif harcama tipini belirler. Bu sekmeler arasında geçiş yaparak her tipe ait günlük ve aylık harcama toplamlarınızı görebilirsiniz.
+  Yeni harcama eklerken o an açık olan sekme otomatik olarak seçilir (form üzerinden de değiştirebilirsiniz).
+
+* GİDER KATEGORİLERİ:
+  Harcama eklerken Elektrik ⚡, Mekanik ⚙️, İnşaat 🏗️ veya Diğer 📦 kategorilerinden birini seçebilirsiniz.
+
+* ÖDEME YÖNTEMLERİ:
+  Ödemenin yapılış şekline göre Havale 🏦, Kredi Kartı 💳 veya Nakit 💵 seçeneklerini belirleyebilirsiniz.
+
+* GELİŞMİŞ FİLTRELEME:
+  Gider Kayıtları listesinin hemen üstünde bulunan filtreler yardımıyla; sadece belirli bir gider türünü, kategoriyi veya ödeme tipini süzerek toplam tutarlarını görebilirsiniz.
+
+* ANALİZ (📊):
+  Alt menüde bulunan "Analiz" butonuna basarak, o ayki toplam harcamalarınızın Kategori bazlı, Gider Tipi bazlı ve Ödeme Yöntemi bazlı yüzdesel dağılımlarını grafiksel olarak görebilirsiniz.
+
+* TELEFON/BİLGİSAYAR EŞLEŞTİRME (BULUT SENKRONİZASYONU ⚙️):
+  1. Varsayılan olarak tüm verileriniz bilgisayarınızın yerel hafızasına (LocalStorage) kaydedilir ve internetiniz olmasa bile kaybolmaz.
+  2. Birden fazla telefondan veya bilgisayardan aynı bütçeyi yönetmek için:
+     - Sağ alttaki "Ayarlar" butonuna tıklayın.
+     - Kendinize özel bir "Ortak Oda Kodu" belirleyin (Örn: "santiye-butcemiz").
+     - Eşleştirmek istediğiniz diğer telefon/bilgisayarda da aynı index.html dosyasını açıp Ayarlar'a girerek aynı Oda Kodunu yazın.
+     - Kaydettiğiniz anda tüm harcamalarınız Firebase bulut altyapısı (ms-harcama projesi) üzerinden anlık olarak senkronize olacaktır.
