@@ -729,15 +729,15 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
 
-    // Default hydebutce project credentials
+    // Default is-butce project credentials
     const DEFAULT_FIREBASE_CONFIG = {
-      apiKey: "AIzaSyC0iPHRwDPMa4IvfLfXG-T0Xi6oHNDEk8g",
-      authDomain: "hydebutce.firebaseapp.com",
-      projectId: "hydebutce",
-      storageBucket: "hydebutce.firebasestorage.app",
-      messagingSenderId: "856315746617",
-      appId: "1:856315746617:web:ab3180aa98415cf603f0e8",
-      measurementId: "G-Z9KV3BHNHS"
+      apiKey: "AIzaSyBnpXGxRtaofwbvOuUQm5EpiW1Mr_r8Iqk",
+      authDomain: "is-butce.firebaseapp.com",
+      projectId: "is-butce",
+      storageBucket: "is-butce.firebasestorage.app",
+      messagingSenderId: "674652865543",
+      appId: "1:674652865543:web:8614d70d0a90e1c90796a2",
+      measurementId: "G-XH31D67T92"
     };
 
     // Categories: Elektrik, Mekanik, İnşaat, Diğer
@@ -819,8 +819,8 @@
         try {
           const saved = localStorage.getItem('is_butce_fb_config');
           const parsed = saved ? JSON.parse(saved) : null;
-          // Auto-upgrade if it was using the legacy ms-harcama project credentials
-          if (parsed && parsed.projectId === 'ms-harcama') {
+          // Auto-upgrade if it was using legacy project credentials
+          if (parsed && (parsed.projectId === 'ms-harcama' || parsed.projectId === 'hydebutce')) {
             return DEFAULT_FIREBASE_CONFIG;
           }
           return parsed ? parsed : DEFAULT_FIREBASE_CONFIG;
